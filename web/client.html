@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Test</title>
+    <style media="screen">
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      p{
+        font-family: sans-serif;
+        margin-left: 5px;
+        overflow-wrap: break-word;
+      }
+      p span {
+        color: rgb(0, 255, 0);
+        font-weight: bold;
+      }
+      h1 {
+        font-family: sans-serif;
+        text-align: center;
+        font-size: 1.6em;
+      }
+      .msgs p:last-child {
+        margin-bottom: 10px
+      }
+      .me {
+        color: rgba(255, 0, 0);
+      }
+      .inp {
+        margin-left: 5px;
+      }
+      .highlite {
+        border-left: 9px solid rgb(255, 255, 0);
+        border-top-left-radius: 5px;
+        border-bottom-left-radius: 5px;
+        padding-left: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="msgs">
+    </div>
+    <input type="text" name="" value="" class="name" placeholder="Nick">
+    <input type="text" name="" value="" class="inp" hidden>
+    <button type="button" name="send" class="btn" hidden>Send</button>
+  </body>
+  <script type="text/javascript">
+    const nick = document.querySelector(".name");
+    const inp = document.querySelector(".inp");
+    const btn = document.querySelector(".btn");
+    const msgs = document.querySelector(".msgs");
+
+    nick.addEventListener("keypress", (event) => {
+      if(event.key == "Enter"){
+        nick.hidden = true;
+        inp.hidden = false;
+        btn.hidden = false;
+        inp.focus();
+        document.title = nick.value;
+        setup(nick.value);
+      }
+    });
+
+    function setup(nick){
+
+      const websocket = new WebSocket("ws://localhost:8080");
+
+      websocket.addEventListener("open", () => {
+        websocket.send(nick);
+      });
+
+      websocket.addEventListener("message", ({data}) => {
+        const event = JSON.parse(data);
+        switch (event.type) {
+          case "joinEvent":
+            let hjoin = document.createElement("h1");
+            hjoin.innerText = `${event.name} sohbete katıldı 📥`;
+            msgs.appendChild(hjoin);
+            break;
+          case "quitEvent":
+            let hquit = document.createElement("h1");
+            hquit.innerText = `${event.name} sohbetten ayrıldı 📤`;
+            msgs.appendChild(hquit);
+            break;
+          case "messageEvent":
+            let p = document.createElement("p");
+            if(event.message.toLowerCase().includes("@"+nick.toLowerCase())){
+              p.classList.add("highlite");
+            }
+            if(event.name == nick){
+              p.innerHTML = `<span class="me">${event.name}:</span> ${event.message}`
+            } else {
+              p.innerHTML = `<span>${event.name}:</span> ${event.message}`
+            }
+            msgs.appendChild(p);
+            break;
+          default:
+            console.log(event.type);
+        }
+      });
+
+      btn.addEventListener("click", (data) => {
+        if(!inp.value) return;
+        websocket.send(inp.value);
+        inp.value = "";
+      });
+
+      inp.addEventListener("keypress", (event) => {
+        if(event.key === "Enter"){
+          btn.click();
+        }
+      })
+  }
+  </script>
+</html>
